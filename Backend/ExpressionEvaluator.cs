@@ -1,26 +1,29 @@
-﻿using System.Diagnostics.CodeAnalysis;
-using System.Reflection.Metadata;
+﻿using System;
+using System.Collections.Generic;
 
 namespace Backend;
 
 public static class ExpressionEvaluator
 {
-    public static double Evalute(string infix) => EvalutePostfix(ToPostfix(infix));
+    public static double Evaluate(string infix) => EvalutePostfix(ToPostfix(infix));
 
     private static string ToPostfix(string infix)
     {
         var posfix = string.Empty;
         var stack = new Stack<char>();
-        foreach (var item in infix)
+        //-----
+        for (int i = 0; i < infix.Length; i++)
         {
+            char item = infix[i];
+
             if (IsOperator(item))
             {
                 if (item == ')')
                 {
                     var ope = stack.Pop();
-                    while(ope != '(')
+                    while (ope != '(')
                     {
-                        posfix += ope;
+                        posfix += ope + " "; 
                         ope = stack.Pop();
                     }
                 }
@@ -38,7 +41,7 @@ public static class ExpressionEvaluator
                         }
                         else
                         {
-                            posfix += stack.Pop();
+                            posfix += stack.Pop() + " "; //-----
                             stack.Push(item);
                         }
                     }
@@ -46,14 +49,23 @@ public static class ExpressionEvaluator
             }
             else
             {
-                posfix += item;
+                //-----
+                while (i < infix.Length && (char.IsDigit(infix[i]) || infix[i] == '.'))
+                {
+                    posfix += infix[i];
+                    i++;
+                }
+                posfix += " "; 
+                i--; 
             }
         }
+
         do
         {
-            posfix += stack.Pop();
+            posfix += stack.Pop() + " ";
         } while (stack.Count != 0);
-        return posfix;
+
+        return posfix.Trim();
     }
 
     private static int PriorityStack(char op) => op switch
@@ -83,17 +95,28 @@ public static class ExpressionEvaluator
     private static double EvalutePostfix(string postfix)
     {
         var stack = new Stack<double>();
-        foreach (var item in postfix)
+        //-----
+        var tokens = postfix.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+
+        foreach (var token in tokens)
         {
-            if (IsOperator(item))
+            if (token.Length == 1 && IsOperator(token[0]))
             {
                 var ope2 = stack.Pop();
                 var ope1 = stack.Pop();
-                stack.Push(Calculate(ope1, ope2, item));
+                stack.Push(Calculate(ope1, ope2, token[0]));
             }
             else
             {
-                stack.Push(char.GetNumericValue(item));
+                //-----
+                if (double.TryParse(token, System.Globalization.CultureInfo.InvariantCulture, out double number))
+                {
+                    stack.Push(number);
+                }
+                else if (double.TryParse(token, out double localNumber))
+                {
+                    stack.Push(localNumber);
+                }
             }
         }
         return stack.Pop();
